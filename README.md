@@ -1,8 +1,8 @@
 # RT-AK 之 STM32 插件 Demo-Cifar10 
 | Version                                                      | Date       | Description                                                 | Other |
 | ------------------------------------------------------------ | ---------- | ----------------------------------------------------------- | ----- |
-| [v0.1.0](https://git.rt-thread.com/luxian/art-pi_cifar10_without_lcd/-/tree/v0.1.0) | 2021/07/07 | Cifar10分类模型部署到 ART-PI 中                             |       |
-| [v0.2.0](https://git.rt-thread.com/luxian/art-pi_cifar10_without_lcd/-/tree/v0.2.0) | 2021/07/08 | 1. 新增 LCD 和 摄像头驱动; 2. 新增使用命令之后 logo 1s 显示 |       |
+| [v0.1.0](https://github.com/EdgeAIWithRTT/Project7-Cifar10_Cube_Art-Pi/tree/v0.1.0) | 2021/07/07 | Cifar10分类模型部署到 ART-PI 中                             |       |
+| [v0.2.0](https://github.com/EdgeAIWithRTT/Project7-Cifar10_Cube_Art-Pi/tree/v0.2.0) | 2021/07/08 | 1. 新增 LCD 和 摄像头驱动; 2. 新增使用命令之后 logo 1s 显示 |       |
 
 ## 1. RT-AK 简介
 
@@ -22,4 +22,4 @@ $ python rt_ai_tools.py --model xxx...
 
 ## 2. 版本说明
 
-版本号对应各个分支，当前 master 分支仅有上位机的训练代码、模型量化代码以及示例数据生成代码
+版本号对应各个分支，当前 master 分支的为最新版本的代码
