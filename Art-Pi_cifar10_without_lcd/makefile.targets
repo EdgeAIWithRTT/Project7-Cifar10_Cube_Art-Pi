@@ -4,4 +4,4 @@ clean2:
 	-@echo ' '
 
 
-*.elf: $(wildcard C:/Users/Admin/Desktop/Art-pi/Art-Pi_cifar10/Art-Pi_cifar10_without_lcd/board/linker_scripts/STM32H750XBHx/link.lds)
+*.elf: $(wildcard D:/Project/ART-PI_Demo/Project7-Cifar10_Cube_Art-Pi/Art-Pi_cifar10_without_lcd/board/linker_scripts/STM32H750XBHx/link.lds)
