@@ -9,12 +9,9 @@ import tensorflow as tf
 from pathlib import Path
 
 def create_test_data(CATEGORIES, DATADIR, img_shape):
-    test_x, test_y = [], []  # 测试集的数据和标签
+    test_x = []  # 测试集的数据和标签
     for category in CATEGORIES:
-
         path = os.path.join(DATADIR, category)
-        class_num = CATEGORIES.index(category)  # get the classification  (0 or a 1). 0=C 1=O
-
         for img in tqdm(os.listdir(path)):  # iterate over each image
             try:
                 img_array = cv2.imread(os.path.join(path, img))  # convert to array
@@ -23,11 +20,10 @@ def create_test_data(CATEGORIES, DATADIR, img_shape):
                 new_array = new_array.astype(np.float32) / 255.
                 new_array = np.expand_dims(new_array, axis=0)
                 test_x.append(new_array)
-                test_y.append(class_num)
             except Exception as e:  # in the interest in keeping the output clean...
                 pass
 
-    return test_x, test_y
+    return test_x
 
 
 def keras2tflite(keras_file, tflite_file, test_images):
@@ -51,6 +47,7 @@ def keras2tflite(keras_file, tflite_file, test_images):
     tflite_model = converter.convert()
     
     tflite_file.write_bytes(tflite_model)
+    print("convert model to tflite done...")
 
 
 
@@ -98,8 +95,8 @@ def main():
     tflite_file = Path("./cifar10_uint8.tflite")
     test_image_path = "./test_imgs/deer.jpg"
 
-    # test_x, test_y = create_test_data(CATEGORIES, DATADIR, img_shape)
-    # keras2tflite(keras_file, tflite_file, test_x)
+    test_x = create_test_data(CATEGORIES, DATADIR, img_shape)
+    keras2tflite(keras_file, tflite_file, test_x)
     tflite_infer(tflite_file, test_image_path, CATEGORIES)
 
 

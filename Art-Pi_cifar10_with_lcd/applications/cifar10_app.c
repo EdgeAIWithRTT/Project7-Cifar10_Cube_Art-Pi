@@ -25,9 +25,7 @@ RT_UNUSED static const rt_uint8_t input_data1[] = cifar10_deer;
 
 struct rt_event ov2640_event;
 static rt_ai_t model = NULL;
-/* fire detection */
 
-int ai_run_complete_flag = 0;
 void ai_run_complete(void *arg){
     *(int*)arg = 1;
 }
@@ -39,8 +37,8 @@ int cifar10_app(void){
     rt_thread_mdelay(1000);
     lcd_clear(BLACK);
 
-    int result = 0;
-    int prediction = 0;
+    rt_err_t result = RT_EOK;
+    int ai_run_complete_flag = 0;
 
     rt_ai_buffer_t *work_buffer = rt_malloc(RT_AI_CIFAR10_WORK_BUFFER_BYTES+RT_AI_CIFAR10_IN_TOTAL_SIZE_BYTES+RT_AI_CIFAR10_OUT_TOTAL_SIZE_BYTES);
 
@@ -56,7 +54,7 @@ int cifar10_app(void){
     }
 
     //prepare input data
-    rt_memcpy(model->input[0], input_data1, RT_AI_CIFAR10_IN_1_SIZE_BYTES);
+    rt_memcpy(model->input[0], input_data0, RT_AI_CIFAR10_IN_1_SIZE_BYTES);
     result = rt_ai_run(model, ai_run_complete, &ai_run_complete_flag);
 
     //process the inference data
@@ -64,19 +62,20 @@ int cifar10_app(void){
         //get inference data
         uint8_t *out = (uint8_t *)rt_ai_output(model, 0);
         //get argmax
-        for(int i = 0 ; i < 10 ; i++){
-             if(out[i] > out[prediction]){
-                 prediction = i;
+        int max_index = 0;
+        for(int i = 1 ; i < 10 ; i++){
+             if(out[i] > out[max_index]){
+                 max_index = i;
              }
         }
 
-        rt_kprintf("cifar10 prediction: %s\n", cifar10_label[prediction]);
-        lcd_show_image(0, 0, 320, 240, DEER);
+        rt_kprintf("cifar10 prediction: %s\n", cifar10_label[max_index]);
+        lcd_show_image(0, 0, 320, 240, AIRPLANE);
         lcd_show_string(10, 172, 16, "Cifar10 model prediction:");
-        lcd_show_string(210, 172, 16, cifar10_label[prediction]);
+        lcd_show_string(210, 172, 16, cifar10_label[max_index]);
         // AI_LOG("Prediction: %d\n", prediction);
     }
     rt_free(work_buffer);
     return 0;
 }
-MSH_CMD_EXPORT(cifar10_app,cifar10 demo);
+MSH_CMD_EXPORT(cifar10_app, cifar10 detection demo);
