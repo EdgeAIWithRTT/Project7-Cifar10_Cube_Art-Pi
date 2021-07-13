@@ -8,60 +8,53 @@ import numpy as np
 import tensorflow as tf
 from pathlib import Path
 
-def create_training_data():
-    training_data = []
+def create_test_data(CATEGORIES, DATADIR, img_shape):
+    test_x, test_y = [], []  # 测试集的数据和标签
     for category in CATEGORIES:
 
         path = os.path.join(DATADIR, category)
         class_num = CATEGORIES.index(category)  # get the classification  (0 or a 1). 0=C 1=O
 
-        for img in tqdm(os.listdir(path)[:100]):  # iterate over each image
+        for img in tqdm(os.listdir(path)):  # iterate over each image
             try:
-                img_array = cv2.imread(os.path.join(path,img))  # convert to array
+                img_array = cv2.imread(os.path.join(path, img))  # convert to array
                 img_array = cv2.cvtColor(img_array, cv2.COLOR_BGR2RGB)
-                new_array = cv2.resize(img_array, (IMG_SIZE, IMG_SIZE))  # resize to normalize data size
-                training_data.append([new_array, class_num])  # add this to our training_data
+                new_array = cv2.resize(img_array, img_shape)  # resize to normalize data size
+                new_array = new_array.astype(np.float32) / 255.
+                new_array = np.expand_dims(new_array, axis=0)
+                test_x.append(new_array)
+                test_y.append(class_num)
             except Exception as e:  # in the interest in keeping the output clean...
                 pass
 
-    return training_data
+    return test_x, test_y
 
 
-def representative_data_gen():
-    for input_value in X:
-        input_value = np.expand_dims(input_value, axis=0)
-        input_value = input_value.astype(np.float32)
-        yield [input_value]
+def keras2tflite(keras_file, tflite_file, test_images):
+    def representative_data_gen():
+        for input_value in test_images:
+            yield [input_value]
+            
+    # 恢复 keras 模型，并预测
+    model = tf.keras.models.load_model(keras_file)
+
+    # 动态量化 dynamic range quantization
+    converter = tf.lite.TFLiteConverter.from_keras_model(model)
+    converter.optimizations = [tf.lite.Optimize.DEFAULT]
+    converter.representative_dataset = representative_data_gen
+    # Ensure that if any ops can't be quantized, the converter throws an error
+    converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+    # Set the input and output tensors to uint8 (APIs added in r2.3)
+    converter.inference_input_type = tf.uint8
+    converter.inference_output_type = tf.uint8
+    
+    tflite_model = converter.convert()
+    
+    tflite_file.write_bytes(tflite_model)
 
 
-def main():
-    # 单个测试样本数据
-    image = cv2.imread(test_path)
-    image = cv2.resize(image, img_shape)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    image = np.expand_dims(image, axis=0)
-    image.flatten()
-    print(image)
-    # # 恢复 keras 模型，并预测
-    # model = tf.keras.models.load_model(keras_file)
-    # # tmp = model.predict(image_bn)
-    # # tmp2 = np.argmax(tmp)
-    # # print()
-    #
-    # # 动态量化 dynamic range quantization
-    # converter = tf.lite.TFLiteConverter.from_keras_model(model)
-    # converter.optimizations = [tf.lite.Optimize.DEFAULT]
-    # converter.representative_dataset = representative_data_gen
-    # # Ensure that if any ops can't be quantized, the converter throws an error
-    # converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
-    # # Set the input and output tensors to uint8 (APIs added in r2.3)
-    # converter.inference_input_type = tf.uint8
-    # converter.inference_output_type = tf.uint8
-    #
-    # tflite_model = converter.convert()
-    #
-    # tflite_file.write_bytes(tflite_model)
 
+def tflite_infer(tflite_file, image_path, CATEGORIES):
     # tflite 模型推理
     interpreter = tf.lite.Interpreter(model_path=str(tflite_file))
     interpreter.allocate_tensors()
@@ -69,7 +62,15 @@ def main():
     # Get input and output tensors.
     input_details = interpreter.get_input_details()[0]
     output_details = interpreter.get_output_details()[0]
+    height = input_details['shape'][1]
+    width = input_details['shape'][2]
 
+    # 单个测试样本数据
+    image = cv2.imread(image_path)
+    image = cv2.resize(image, (width, height))
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    image = np.expand_dims(image, axis=0)
+    image.flatten()
     interpreter.set_tensor(input_details['index'], image)
 
     start_time = time.time()
@@ -87,26 +88,20 @@ def main():
     print(f"prediction: {CATEGORIES[np.argmax(output_data)]}")
     print('time: {:.3f}ms'.format((stop_time - start_time) * 1000))
     print("model size: {:.2f} MB".format(os.path.getsize(tflite_file)/1024/1024))
+    
 
+def main():
+    DATADIR = './quantitative_dataset'
+    CATEGORIES = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+    img_shape = (32, 32)
+    keras_file = './cifar10_float32.h5'
+    tflite_file = Path("./cifar10_uint8.tflite")
+    test_image_path = "./test_imgs/deer.jpg"
 
+    # test_x, test_y = create_test_data(CATEGORIES, DATADIR, img_shape)
+    # keras2tflite(keras_file, tflite_file, test_x)
+    tflite_infer(tflite_file, test_image_path, CATEGORIES)
 
 
 if __name__ == "__main__":
-    DATADIR = './dataset'
-    CATEGORIES = ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
-    IMG_SIZE = 32
-    test_path = "./test_imgs/deer.jpg"
-    img_shape = (32, 32)
-    keras_file = './cifar10_model_float32.h5'
-    tflite_file = Path("./cifar10_int8.tflite")
-    training_data = create_training_data()
-    random.shuffle(training_data)
-    X, Y = [], []
-    for features, label in training_data:
-        X.append(features)
-        Y.append(label)
-
-    X = np.array(X).reshape(-1, IMG_SIZE, IMG_SIZE, 3)
-    X = X / 255.
-    Y = np.array(Y)
     main()
